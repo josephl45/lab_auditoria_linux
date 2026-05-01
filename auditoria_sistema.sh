@@ -70,7 +70,21 @@ NICE_DESPUES=$(ps -o ni= -p "$TOP_PID" | tr -d ' ')
 echo "[INFO] Niceness despues: $NICE_DESPUES"
 
 # --- SECCION E: Integrante 3 agrega aqui esta noche ---
-
+# --- SECCION E: CONTROL MEDIANTE SENALES ---
+echo ""
+echo "--- [E] CONTROL MEDIANTE SENALES ---"
+echo "Proceso mas pesado: PID $TOP_PID - $TOP_CMD"
+echo ""
+echo "1) SIGTERM (15) - cierre ordenado"
+echo "2) SIGKILL (9)  - terminacion forzada"
+echo "3) No enviar senal"
+read -rp "Seleccione opcion [1/2/3]: " OPT
+case "$OPT" in
+    1) kill -15 "$TOP_PID" && echo "[OK] SIGTERM enviado" ;;
+    2) kill -9  "$TOP_PID" && echo "[OK] SIGKILL enviado" ;;
+    3) echo "[INFO] Sin senal enviada" ;;
+    *) echo "[AVISO] Opcion invalida" ;;
+esac
 echo ""
 echo "============================================================"
 echo "  Reporte guardado en: $REPORTE"
