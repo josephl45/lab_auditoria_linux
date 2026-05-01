@@ -46,6 +46,28 @@ echo ""
 echo "[INFO] PID mas pesado: $TOP_PID ($TOP_CMD)"
 
 # --- SECCION C y D: Integrante 2 agrega aqui esta noche ---
+# --- SECCION C: DIAGNOSTICO DE PROCESOS ZOMBI ---
+echo ""
+echo "--- [C] DIAGNOSTICO DE PROCESOS ZOMBI ---"
+ZOMBIES=$(ps aux | awk '$8 == "Z" {print $2}')
+if [ -z "$ZOMBIES" ]; then
+    echo "[OK] Sin procesos zombi detectados."
+else
+    for Z in $ZOMBIES; do
+        PPID=$(ps -o ppid= -p "$Z" | tr -d ' ')
+        PNAME=$(ps -o comm= -p "$PPID")
+        echo "Zombi PID:$Z  PPID:$PPID  Padre:$PNAME"
+    done
+fi
+
+# --- SECCION D: RENICE +15 ---
+echo ""
+echo "--- [D] OPTIMIZACION DE PRIORIDAD ---"
+NICE_ANTES=$(ps -o ni= -p "$TOP_PID" | tr -d ' ')
+echo "[INFO] Niceness antes: $NICE_ANTES"
+renice +15 -p "$TOP_PID" 2>/dev/null
+NICE_DESPUES=$(ps -o ni= -p "$TOP_PID" | tr -d ' ')
+echo "[INFO] Niceness despues: $NICE_DESPUES"
 
 # --- SECCION E: Integrante 3 agrega aqui esta noche ---
 
