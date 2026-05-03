@@ -77,6 +77,7 @@
     echo "2) SIGKILL (9)"
     echo "3) No enviar"
     read -p "Opcion: " OPT
+    echo "Opcion elegida: $OPT"
 
     case $OPT in
         1) kill -15 $TOP_PID ; echo "SIGTERM enviado a $TOP_PID" ;;
