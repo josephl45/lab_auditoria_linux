@@ -37,26 +37,21 @@
 
     echo ""
     echo "ERRORES DE RED (errors del metodo USE)"
-    ip -s link | awk '
-        /^[0-9]+:/ {iface=$2}
-        /RX:/ {getline; printf "%-12s RX errors=%s dropped=%s\n", iface, $3, $4}
-        /TX:/ {getline; printf "%-12s TX errors=%s dropped=%s\n", iface, $3, $4}
-    '
+    tail -n +3 /proc/net/dev | while read iface rxb rxp rxerr rxdrop f1 f2 f3 f4 txb txp txerr txdrop resto; do
+        iface=${iface%:}
+        echo "$iface RX errors=$rxerr dropped=$rxdrop TX errors=$txerr dropped=$txdrop"
+    done
 
     # SECCION C: DIAGNOSTICO DE PROCESOS ZOMBI
     # Busca procesos en estado Z (zombi/defunct) y reporta el PID del zombi junto con el PID y nombre de su proceso padre.
 
     echo ""
     echo "PROCESOS ZOMBI"
-    ZOMBIES=$(ps aux | awk '$8 ~ /Z/ {print $2}')
-    if [ -z "$ZOMBIES" ]; then
-        echo "Sin zombis."
+    zombies=$(ps -eo stat,pid,ppid,comm | grep "^Z")
+    if [ -z "$zombies" ]; then
+          echo "Sin zombis."
     else
-        for Z in $ZOMBIES; do
-            PADRE=$(ps -o ppid= -p $Z)
-            NOMBRE=$(ps -o comm= -p $PADRE)
-            echo "Zombi PID=$Z  PPID=$PADRE  Padre=$NOMBRE"
-        done
+          echo "$zombies"
     fi
 
     # SECCION D: ACCION DE OPTIMIZACION (RENICE +15)
