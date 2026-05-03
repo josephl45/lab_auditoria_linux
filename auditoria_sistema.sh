@@ -1,91 +1,66 @@
 #!/bin/bash
-# ============================================================
-# auditoria_sistema.sh
-# Laboratorio: Automatizacion de Auditoria y Control de Procesos
-# ============================================================
-# INTEGRANTE 1 → Seccion A y B
-# INTEGRANTE 2 → Seccion C y D  (se agrega esta noche)
-# INTEGRANTE 3 → Seccion E      (se agrega esta noche)
-# ============================================================
 
-# --- SECCION A: GESTION DE ARCHIVOS Y ENTORNO (FHS) ---
 DIR_LOGS="$HOME/Logs_Auditoria"
 
 if [ ! -d "$DIR_LOGS" ]; then
-    mkdir -p "$DIR_LOGS"
-    echo "[INFO] Directorio creado: $DIR_LOGS"
-else
-    echo "[INFO] Directorio ya existe: $DIR_LOGS"
+    mkdir "$DIR_LOGS"
+    echo "Directorio creado: $DIR_LOGS"
 fi
 
 FECHA=$(date +"%d_%m_%Y")
 REPORTE="$DIR_LOGS/reporte_$FECHA.log"
-exec > >(tee -a "$REPORTE") 2>&1
 
-echo "============================================================"
-echo "  REPORTE DE AUDITORIA DEL SISTEMA"
-echo "  Fecha: $(date '+%d/%m/%Y %H:%M:%S')"
-echo "  Usuario: $(whoami) | Host: $(hostname)"
-echo "============================================================"
-
-# --- SECCION B: MONITORIZACION DE RENDIMIENTO (METODO USE) ---
+{
+echo "==== REPORTE DE AUDITORIA ===="
+echo "Fecha: $(date)"
+echo "Usuario: $(whoami)"
 echo ""
-echo "--- [B] MONITORIZACION DE RENDIMIENTO ---"
 
-LOAD=$(cat /proc/loadavg | awk '{print $1, $2, $3}')
-echo "[LOAD AVERAGE] 1, 5 y 15 minutos: $LOAD"
+echo "--- LOAD AVERAGE ---"
+uptime
 
 echo ""
-echo "[TOP 3 PROCESOS - CPU]"
-ps aux --sort=-%cpu | awk 'NR==2,NR==4 {printf "PID:%-8s CPU:%-6s CMD:%s\n", $2, $3, $11}'
+echo "--- TOP 3 PROCESOS CPU ---"
+ps aux --sort=-%cpu | head -4
 
 TOP_PID=$(ps aux --sort=-%cpu | awk 'NR==2 {print $2}')
 TOP_CMD=$(ps aux --sort=-%cpu | awk 'NR==2 {print $11}')
+echo ""
+echo "Proceso mas pesado: PID=$TOP_PID  CMD=$TOP_CMD"
 
 echo ""
-echo "[INFO] PID mas pesado: $TOP_PID ($TOP_CMD)"
-
-# --- SECCION C y D: Integrante 2 agrega aqui esta noche ---
-# --- SECCION C: DIAGNOSTICO DE PROCESOS ZOMBI ---
-echo ""
-echo "--- [C] DIAGNOSTICO DE PROCESOS ZOMBI ---"
-ZOMBIES=$(ps aux | awk '$8 == "Z" {print $2}')
+echo "--- PROCESOS ZOMBI ---"
+ZOMBIES=$(ps aux | awk '$8 ~ /Z/ {print $2}')
 if [ -z "$ZOMBIES" ]; then
-    echo "[OK] Sin procesos zombi detectados."
+    echo "Sin zombis."
 else
     for Z in $ZOMBIES; do
-        PPID=$(ps -o ppid= -p "$Z" | tr -d ' ')
-        PNAME=$(ps -o comm= -p "$PPID")
-        echo "Zombi PID:$Z  PPID:$PPID  Padre:$PNAME"
+        PADRE=$(ps -o ppid= -p $Z)
+        NOMBRE=$(ps -o comm= -p $PADRE)
+        echo "Zombi PID=$Z  PPID=$PADRE  Padre=$NOMBRE"
     done
 fi
 
-# --- SECCION D: RENICE +15 ---
 echo ""
-echo "--- [D] OPTIMIZACION DE PRIORIDAD ---"
-NICE_ANTES=$(ps -o ni= -p "$TOP_PID" | tr -d ' ')
-echo "[INFO] Niceness antes: $NICE_ANTES"
-renice +15 -p "$TOP_PID" 2>/dev/null
-NICE_DESPUES=$(ps -o ni= -p "$TOP_PID" | tr -d ' ')
-echo "[INFO] Niceness despues: $NICE_DESPUES"
+echo "--- OPTIMIZACION (RENICE) ---"
+echo "Niceness antes: $(ps -o ni= -p $TOP_PID)"
+renice +15 -p $TOP_PID
+echo "Niceness despues: $(ps -o ni= -p $TOP_PID)"
 
-# --- SECCION E: Integrante 3 agrega aqui esta noche ---
-# --- SECCION E: CONTROL MEDIANTE SENALES ---
+} | tee "$REPORTE"
+
 echo ""
-echo "--- [E] CONTROL MEDIANTE SENALES ---"
-echo "Proceso mas pesado: PID $TOP_PID - $TOP_CMD"
-echo ""
-echo "1) SIGTERM (15) - cierre ordenado"
-echo "2) SIGKILL (9)  - terminacion forzada"
-echo "3) No enviar senal"
-read -rp "Seleccione opcion [1/2/3]: " OPT
-case "$OPT" in
-    1) kill -15 "$TOP_PID" && echo "[OK] SIGTERM enviado" ;;
-    2) kill -9  "$TOP_PID" && echo "[OK] SIGKILL enviado" ;;
-    3) echo "[INFO] Sin senal enviada" ;;
-    *) echo "[AVISO] Opcion invalida" ;;
+echo "--- ENVIO DE SEÑAL ---"
+echo "1) SIGTERM (15)"
+echo "2) SIGKILL (9)"
+echo "3) No enviar"
+read -p "Opcion: " OPT
+
+case $OPT in
+    1) kill -15 $TOP_PID ; echo "SIGTERM enviado a $TOP_PID" ;;
+    2) kill -9  $TOP_PID ; echo "SIGKILL enviado a $TOP_PID" ;;
+    3) echo "Sin accion" ;;
+    *) echo "Opcion invalida" ;;
 esac
-echo ""
-echo "============================================================"
-echo "  Reporte guardado en: $REPORTE"
-echo "============================================================"
+
+echo "Reporte guardado en: $REPORTE"
