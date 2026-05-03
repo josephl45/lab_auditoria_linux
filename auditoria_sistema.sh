@@ -29,6 +29,13 @@ echo ""
 echo "Proceso mas pesado: PID=$TOP_PID  CMD=$TOP_CMD"
 
 echo ""
+echo "--- ERRORES DE RED (RX/TX) ---"
+ip -s link | awk '
+    /^[0-9]+:/ {iface=$2}
+    /RX:/ {getline; printf "%-12s RX errors=%s dropped=%s\n", iface, $3, $4}
+    /TX:/ {getline; printf "%-12s TX errors=%s dropped=%s\n", iface, $3, $4}'
+
+echo ""
 echo "--- PROCESOS ZOMBI ---"
 ZOMBIES=$(ps aux | awk '$8 ~ /Z/ {print $2}')
 if [ -z "$ZOMBIES" ]; then
